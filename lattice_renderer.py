@@ -11,11 +11,11 @@ class LatticeRenderer:
   VERTEX_COLOR = color.Color('#962420', 0.6)
   VERTEX_EDGE_COLOR = color.Color('#962420')
   PRINCIPAL_EDGE_COLOR = color.Color('#666')
-  INNER_EDGE_COLOR = 'b'
+  INNER_EDGE_COLOR = color.Color("#F59127")
 
   def __init__(self):
     self.canvas = SceneCanvas(
-      title = "Lattice Renderer",
+      title = "Lattice Visualizer",
       keys = 'interactive',
       size = (800, 600),
       show = True,
@@ -28,37 +28,43 @@ class LatticeRenderer:
     self.view = self.canvas.central_widget.add_view(self.camera)
 
   def load_lattice(self, lattice, extrude_width):
-    cw = lattice.cunit_width
-    bounds = lattice.dim * cw
-    max_inner_edges = math.floor(float(cw) / extrude_width) - 1
+    cs = lattice.cs
+    bounds = lattice.dim * cs
+    max_inner_edges = int(math.floor(float(cs) / extrude_width) - 1)
 
-    axes = CoolAxes(pos=(-2*cw,-2*cw,-cw),width=2,scale=cw)
+    axes = CoolAxes(pos=(-2*cs,-2*cs,-cs),width=2,scale=cs)
     self.camera.center = bounds / 2
-    self.camera.set_range((-cw,bounds[0]+cw),(-cw,bounds[1]+cw),(-cw,bounds[2]+cw))
+    self.camera.set_range((-cs,bounds[0]+cs),(-cs,bounds[1]+cs),(-cs,bounds[2]+cs))
     ground_plane = visuals.Rectangle(
       pos = (bounds[0] / 2, bounds[1] / 2, 0),
       color = self.GROUND_COLOR,
-      width = bounds[0] + 2 * cw,
-      height = bounds[1] + 2 * cw,
+      width = bounds[0] + 2 * cs,
+      height = bounds[1] + 2 * cs,
       border_color = self.GROUND_BORDER_COLOR
       )
     self.view.add(axes)
     self.view.add(ground_plane)
 
     lps = lattice.lattice_points
-    p = np.array(list(lps)) * cw
+    p = np.array(list(lps)) * cs
     vertex_set = set()
     principal_edge_set = set()
+    inner_edge_list = []
     for lp in lps:
       cunit = lattice.cunits[lp]
       vertex_set = vertex_set | cunit.vertices
       principal_edge_set = principal_edge_set | cunit.principal_edges
+      inner_edge_list += cunit.inner_edges(max_inner_edges)
+    print "# of vertices: " + str(len(vertex_set))
+    print "# of principal edges: " + str(len(principal_edge_set))
+    print "# of inner edges: " + str(len(inner_edge_list))
     vertices = visuals.Markers()
-    vertices.set_data(pos = np.array(list(vertex_set)) * cw, size = 5, face_color = self.VERTEX_COLOR, edge_color = self.VERTEX_EDGE_COLOR)
-    principal_edges = visuals.Line(np.array(list(principal_edge_set)) * cw, connect='segments', antialias=True, color=self.PRINCIPAL_EDGE_COLOR, width=1.5)
-    #inner_edges = visuals.Line
+    vertices.set_data(pos = np.array(list(vertex_set)) * cs, size = 5, face_color = self.VERTEX_COLOR, edge_color = self.VERTEX_EDGE_COLOR)
+    principal_edges = visuals.Line(np.array(list(principal_edge_set)) * cs, connect='segments', antialias=True, color=self.PRINCIPAL_EDGE_COLOR, width=1.5)
+    inner_edges = visuals.Line(np.array(inner_edge_list) * cs, connect='segments', antialias=True, color=self.INNER_EDGE_COLOR)
     self.view.add(vertices)
     self.view.add(principal_edges)
+    self.view.add(inner_edges)
 
   def render(self):
     self.canvas.app.run()

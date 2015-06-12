@@ -2,7 +2,7 @@ import numpy as np
 from scipy import spatial
 
 class StressMesh:
-  def __init__(self, node_file, stress_file):
+  def __init__(self, node_file, stress_file, mesh_size):
     self.nodes = np.genfromtxt(
       node_file,
       dtype = 'f4',
@@ -19,10 +19,13 @@ class StressMesh:
       usecols = (1,2,3),
       autostrip = True
       )
+    self.mesh_size = mesh_size
     self.min_p = np.amin(self.nodes, axis=0)
     self.max_p = np.amax(self.nodes, axis=0)
     self.bounds = self.max_p - self.min_p
+    print "Part Dimensions: " + " x ".join(list(self.bounds.astype(str)))
     self.max_stress = abs(max(np.amax(self.stresses), np.amin(self.stresses), key=abs))
+    print "Maximum Stress: " + str(self.max_stress)
     self.node_tree = spatial.KDTree(self.nodes)
 
   def nearest_stress(self, point, dist=float('inf'), absV=True, norm=True):
@@ -35,6 +38,9 @@ class StressMesh:
 
 class Cunit:
   I,J,K = np.array([1,0,0]),np.array([0,1,0]),np.array([0,0,1])
+  _vertices = None
+  _principal_edges = None
+  _inner_edges = None
 
   def __init__(self, vertex, stress, parent):
     self.vertex = vertex
@@ -45,56 +51,79 @@ class Cunit:
     self.ype = np.array([self.vertex, self.vertex + self.J])
     self.zpe = np.array([self.vertex, self.vertex + self.K])
     self.parent = parent
-    self._empty_neighbors = None
 
   def __str__(self):
     return str(self.stress)
 
   @property
   def vertices(self):
-    vertices = set([tuple(self.vertex)])
-    if self.sx is not None:
-      for offset in [self.J, self.K, self.J + self.K]:
-        vertices.add(tuple(self.vertex + offset))
-    if self.sy is not None:
-      for offset in [self.I, self.K, self.I + self.K]:
-        vertices.add(tuple(self.vertex + offset))
-    if self.sz is not None:
-      for offset in [self.I, self.J, self.I + self.J]:
-        vertices.add(tuple(self.vertex + offset))
-    return vertices
+    if self._vertices is None:
+      self._vertices = set([tuple(self.vertex)])
+      if self.sx is not None:
+        for offset in [self.J, self.K, self.J + self.K]:
+          self._vertices.add(tuple(self.vertex + offset))
+      if self.sy is not None:
+        for offset in [self.I, self.K, self.I + self.K]:
+          self._vertices.add(tuple(self.vertex + offset))
+      if self.sz is not None:
+        for offset in [self.I, self.J, self.I + self.J]:
+          self._vertices.add(tuple(self.vertex + offset))
+    return self._vertices
 
   @property
   def principal_edges(self):
-    principal_edges = set()
-    toTuple = lambda a: tuple(map(tuple,a))
-    if self.sx is not None:
-      for edge in [self.ype,self.ype+self.K,self.zpe,self.zpe+self.J]:
-        principal_edges.add(toTuple(edge))
-    if self.sy is not None:
-      for edge in [self.xpe,self.xpe+self.K,self.zpe,self.zpe+self.I]:
-        principal_edges.add(toTuple(edge))
-    if self.sz is not None:
-      for edge in [self.xpe,self.xpe+self.J,self.ype,self.ype+self.I]:
-        principal_edges.add(toTuple(edge))
-    return principal_edges
+    if self._principal_edges is None:
+      self._principal_edges = set()
+      toTuple = lambda a: tuple(map(tuple,a))
+      if self.sx is not None:
+        for edge in [self.ype,self.ype+self.K,self.zpe,self.zpe+self.J]:
+          self._principal_edges.add(toTuple(edge))
+      if self.sy is not None:
+        for edge in [self.xpe,self.xpe+self.K,self.zpe,self.zpe+self.I]:
+          self._principal_edges.add(toTuple(edge))
+      if self.sz is not None:
+        for edge in [self.xpe,self.xpe+self.J,self.ype,self.ype+self.I]:
+          self._principal_edges.add(toTuple(edge))
+    return self._principal_edges
+
+  def inner_edges(self, max_n):
+    if self._inner_edges is None:
+      self._inner_edges = []
+      if self.sx is not None: 
+        num1,num2 = tuple(np.rint(self.sx * max_n).astype(int))
+        step1,step2 = 1.0/(num1+1), 1.0/(num2+1)
+        self._inner_edges += [self.ype + i*step1*self.K for i in xrange(1,num1+1)]
+        self._inner_edges += [self.zpe + i*step2*self.J for i in xrange(1,num2+1)]
+      if self.sy is not None: 
+        num1,num2 = tuple(np.rint(self.sy * max_n).astype(int))
+        step1,step2 = 1.0/(num1+1), 1.0/(num2+1)
+        self._inner_edges += [self.xpe + i*step1*self.K for i in xrange(1,num1+1)]
+        self._inner_edges += [self.zpe + i*step2*self.I for i in xrange(1,num2+1)]
+      if self.sz is not None: 
+        num1,num2 = tuple(np.rint(self.sz * max_n).astype(int))
+        step1,step2 = 1.0/(num1+1), 1.0/(num2+1)
+        self._inner_edges += [self.xpe + i*step1*self.J for i in xrange(1,num1+1)]
+        self._inner_edges += [self.ype + i*step2*self.I for i in xrange(1,num2+1)]
+    return self._inner_edges
 
 class Lattice:
-  def __init__(self, stress_mesh, cunit_width, scale = 1):
+  def __init__(self, stress_mesh, cunit_size, scale = 1):
     self.stress_mesh = stress_mesh
-    self.generate_cunits(cunit_width, scale)
+    self.cs = cunit_size
+    self.scale = scale
+    self.generate_cunits()
 
-  def generate_cunits(self, cunit_width, scale = 1):
-    self.cunit_width = cunit_width
-    self.dim = np.ceil(self.stress_mesh.bounds / cunit_width).astype(int) + np.ones(3, dtype=int)
+  def generate_cunits(self):
+    self.dim = np.ceil(self.stress_mesh.bounds / self.cs).astype(int) + np.ones(3, dtype=int)
+    print "Lattice Dimensions: " + " x ".join(list(self.dim.astype(str)))
     self.lattice_points = set()
     self.cunits = np.empty(self.dim, dtype = object)
-    dp = np.array([0, cunit_width / 2., cunit_width / 2.])
-    near_radius = cunit_width * 0.49
+    dp = np.array([0, self.cs / 2., self.cs / 2.])
+    near_radius = self.stress_mesh.mesh_size * 0.49
     for i in xrange(self.dim[0]):
       for j in xrange(self.dim[1]):
         for k in xrange(self.dim[2]):
-          point = np.array([i,j,k]) * cunit_width + self.stress_mesh.min_p
+          point = np.array([i,j,k]) * self.cs + self.stress_mesh.min_p
           stress = [None] * 3
           void = 0
           for a in xrange(3):
@@ -103,7 +132,7 @@ class Lattice:
               void += 1
             else: 
               stress[a] = np.delete(stress[a],a)
-              if scale != 1: stress[a] = [np.minimum(stress[a] * scale, np.ones(2))]
+              if self.scale != 1: stress[a] = np.minimum(stress[a] * self.scale, np.ones(2))
           if void == 3:
             continue
           else:
