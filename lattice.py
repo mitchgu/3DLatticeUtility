@@ -1,7 +1,5 @@
 import numpy as np
 from scipy import spatial
-from mpl_toolkits.mplot3d import axes3d
-import matplotlib.pyplot as plt
 
 class StressMesh:
   def __init__(self, node_file, stress_file):

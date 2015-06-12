@@ -1,7 +1,6 @@
 import lattice as lt
 from lattice_renderer import LatticeRenderer
-import sys
-import cProfile
+import sys, cProfile
 
 def main():
   if len(sys.argv) != 4:
