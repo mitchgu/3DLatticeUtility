@@ -42,18 +42,37 @@ class LatticeNode(Node):
   def __init__(self, lattice, extrude_width, parent=None, name=None):
     self.name = name  # to allow __str__ before Node.__init__
     Node.__init__(self, parent, name)
-    self.lattice = lattice
+    self.slice_all = slice(0,np.amax(lattice.dim),None)
     self.max_inner_edges = int(math.floor(float(lattice.cs) / extrude_width) - 1)
     self.cunit_nodes = np.empty(lattice.dim, dtype = object)
-    self.create_cunit_nodes()
-    self.set_transform('st', scale = np.ones(3) * self.lattice.cs)
-
-  def create_cunit_nodes(self):
-    lps = self.lattice.lattice_points
-    for lp in lps:
-      current_cunit = CunitNode(self.lattice.cunits[lp], self.max_inner_edges, parent=self)
+    self.set_transform('st', scale = np.ones(3) * lattice.cs)
+    for lp in lattice.lattice_points:
+      current_cunit = CunitNode(lattice.cunits[lp], self.max_inner_edges, parent=self)
       current_cunit.set_transform('st', translate = np.array(lp))
       self.cunit_nodes[lp] = current_cunit
+
+  def filter_cunit_nodes(self, i,j,k):
+    if i == None: i = self.slice_all
+    if j == None: j = self.slice_all
+    if k == None: k = self.slice_all
+    return self.cunit_nodes[i,j,k].flatten()
+
+  def show_hide(self, mode, coords):
+    i,j,k = coords
+    selected_cunits = self.filter_cunit_nodes(i,j,k)
+    for i in xrange(selected_cunits.size):
+      cu = selected_cunits[i]
+      if cu is not None:
+        if mode:
+          cu.show()
+        else:
+          cu.hide()
+
+  def show(self, coords=(None,None,None)):
+    self.show_hide(True, coords)
+
+  def hide(self, coords=(None,None,None)):
+    self.show_hide(False, coords)
 
 class CunitNode(Node):
   VERTEX_COLOR = color.Color('#962420', 0.6)
@@ -64,7 +83,6 @@ class CunitNode(Node):
   def __init__(self, cu, max_n, parent=None, name=None):
     self.name = name  # to allow __str__ before Node.__init__
     Node.__init__(self, parent, name)
-    self.cu = cu
     self.markers = visuals.Markers(parent=self)
     self.markers.set_data(
       pos = np.array(list(cu.vertices)),
@@ -88,4 +106,14 @@ class CunitNode(Node):
       color=self.INNER_EDGE_COLOR,
       parent = self
       )
+
+  def show(self):
+    self.markers.visible = True
+    self.principal_edges.visible = True
+    self.inner_edges.visible = True
+
+  def hide(self):
+    self.markers.visible = False
+    self.principal_edges.visible = False
+    self.inner_edges.visible = False
 
