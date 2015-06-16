@@ -53,6 +53,7 @@ class LatticeRenderer:
     cs = lattice.cs
     bounds = lattice.dim * cs
     self.load_extras(bounds, cs)
+    max_inner_edges = int(math.floor(float(lattice.cs) / extrude_width) - 1)
 
     lps = lattice.lattice_points
     p = np.array(list(lps)) * cs
@@ -61,6 +62,7 @@ class LatticeRenderer:
     inner_edge_list = []
     for lp in lps:
       cunit = lattice.cunits[lp]
+      cunit.vertex = np.array(lp)
       vertex_set = vertex_set | cunit.vertices
       principal_edge_set = principal_edge_set | cunit.principal_edges
       inner_edge_list += cunit.inner_edges(max_inner_edges)

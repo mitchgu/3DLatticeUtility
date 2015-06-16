@@ -11,6 +11,8 @@ def main():
   mesh_size = float(raw_input("Enter resolution of mesh (mm) [Default is cube unit size]: ") or cunit_size)
   stress_scale = float(raw_input("Enter stress magnitude scale [Default 1]: ") or 1)
   extrude_width = float(raw_input("Enter filament extrusion width [Default 1mm]: ") or 1.0)
+  render_method = raw_input("Use flexible lattice loading? (slower) [Y or N] [Default N]: ") or 'N'
+  render_method_bool = True if render_method == 'Y' else False
 
   print "Creating a stress mesh from FEA files"
   stress_mesh = lt.StressMesh(node_file_path,stress_file_path, mesh_size)
@@ -19,7 +21,10 @@ def main():
   print "Setting up the visualization window"
   lr = LatticeRenderer()
   print "Loading the lattice into the visualization"
-  lr.load_better_lattice(lattice, extrude_width)
+  if render_method_bool:
+    lr.load_better_lattice(lattice, extrude_width)
+  else: 
+    lr.load_lattice(lattice, extrude_width)
   print "Running visualization"
   lr.render()
 

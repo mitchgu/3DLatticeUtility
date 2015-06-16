@@ -42,19 +42,28 @@ class Cunit:
   _principal_edges = None
   _inner_edges = None
 
-  def __init__(self, vertex, stress, parent):
-    self.vertex = np.zeros(3) #vertex
+  def __init__(self, stress, parent):
     self.sx = stress[0]
     self.sy = stress[1]
     self.sz = stress[2]
-    self.xpe = np.array([self.vertex, self.vertex + self.I])
-    self.ype = np.array([self.vertex, self.vertex + self.J])
-    self.zpe = np.array([self.vertex, self.vertex + self.K])
     self.parent = parent
+    self.vertex = np.zeros(3)
 
   def __str__(self):
     return str(self.stress)
 
+  @property
+  def xpe(self):
+    return np.array([self.vertex, self.vertex + self.I])
+
+  @property
+  def ype(self):
+    return np.array([self.vertex, self.vertex + self.J])
+  
+  @property
+  def zpe(self):
+    return np.array([self.vertex, self.vertex + self.K])
+  
   @property
   def vertices(self):
     if self._vertices is None:
@@ -88,7 +97,7 @@ class Cunit:
 
   def inner_edges(self, max_n):
     if self._inner_edges is None:
-      self._inner_edges = []
+      self._inner_edges = [np.array([self.vertex,self.vertex])] # just so it's not none
       if self.sx is not None: 
         num1,num2 = tuple(np.rint(self.sx * max_n).astype(int))
         step1,step2 = 1.0/(num1+1), 1.0/(num2+1)
@@ -137,5 +146,5 @@ class Lattice:
             continue
           else:
             self.lattice_points.add((i,j,k))
-            self.cunits[i,j,k] = Cunit(np.array([i,j,k]), stress, self) 
+            self.cunits[i,j,k] = Cunit(stress, self) 
       

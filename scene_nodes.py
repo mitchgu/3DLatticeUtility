@@ -46,15 +46,13 @@ class LatticeNode(Node):
     self.max_inner_edges = int(math.floor(float(lattice.cs) / extrude_width) - 1)
     self.cunit_nodes = np.empty(lattice.dim, dtype = object)
     self.create_cunit_nodes()
+    self.set_transform('st', scale = np.ones(3) * self.lattice.cs)
 
   def create_cunit_nodes(self):
     lps = self.lattice.lattice_points
     for lp in lps:
       current_cunit = CunitNode(self.lattice.cunits[lp], self.max_inner_edges, parent=self)
-      current_cunit.set_transform(
-        'st',
-        translate = np.array(lp) * self.lattice.cs,
-        scale = np.ones(3) * self.lattice.cs)
+      current_cunit.set_transform('st', translate = np.array(lp))
       self.cunit_nodes[lp] = current_cunit
 
 class CunitNode(Node):
@@ -89,5 +87,5 @@ class CunitNode(Node):
       antialias=True,
       color=self.INNER_EDGE_COLOR,
       parent = self
-      ) if len(cu_inner_edges) != 0 else None
+      )
 
