@@ -43,7 +43,7 @@ class Cunit:
   _inner_edges = None
 
   def __init__(self, vertex, stress, parent):
-    self.vertex = vertex
+    self.vertex = np.zeros(3) #vertex
     self.sx = stress[0]
     self.sy = stress[1]
     self.sz = stress[2]

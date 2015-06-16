@@ -19,7 +19,7 @@ def main():
   print "Setting up the visualization window"
   lr = LatticeRenderer()
   print "Loading the lattice into the visualization"
-  lr.load_lattice(lattice, extrude_width)
+  lr.load_better_lattice(lattice, extrude_width)
   print "Running visualization"
   lr.render()
 

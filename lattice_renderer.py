@@ -1,7 +1,7 @@
 import numpy as np
-from vispy import scene, color
+from vispy import color
 from vispy.scene import SceneCanvas, cameras, visuals
-from vispy_extras import CoolAxes
+from scene_nodes import CoolAxes, LatticeNode
 from lattice import Lattice, Cunit
 import copy, math
 
@@ -27,11 +27,7 @@ class LatticeRenderer:
     self.camera = cameras.ArcballCamera()
     self.view = self.canvas.central_widget.add_view(self.camera)
 
-  def load_lattice(self, lattice, extrude_width):
-    cs = lattice.cs
-    bounds = lattice.dim * cs
-    max_inner_edges = int(math.floor(float(cs) / extrude_width) - 1)
-
+  def load_extras(self, bounds, cs):
     axes = CoolAxes(pos=(-2*cs,-2*cs,-cs),width=2,scale=cs)
     self.camera.center = bounds / 2
     self.camera.set_range((-cs,bounds[0]+cs),(-cs,bounds[1]+cs),(-cs,bounds[2]+cs))
@@ -44,6 +40,19 @@ class LatticeRenderer:
       )
     self.view.add(axes)
     self.view.add(ground_plane)
+
+  def load_better_lattice(self, lattice, extrude_width):
+    cs = lattice.cs
+    bounds = lattice.dim * cs
+    self.load_extras(bounds, cs)
+
+    lattice_node = LatticeNode(lattice, extrude_width)
+    self.view.add(lattice_node)
+
+  def load_lattice(self, lattice, extrude_width):
+    cs = lattice.cs
+    bounds = lattice.dim * cs
+    self.load_extras(bounds, cs)
 
     lps = lattice.lattice_points
     p = np.array(list(lps)) * cs
@@ -59,9 +68,24 @@ class LatticeRenderer:
     print "# of principal edges: " + str(len(principal_edge_set))
     print "# of inner edges: " + str(len(inner_edge_list))
     vertices = visuals.Markers()
-    vertices.set_data(pos = np.array(list(vertex_set)) * cs, size = 5, face_color = self.VERTEX_COLOR, edge_color = self.VERTEX_EDGE_COLOR)
-    principal_edges = visuals.Line(np.array(list(principal_edge_set)) * cs, connect='segments', antialias=True, color=self.PRINCIPAL_EDGE_COLOR, width=1.5)
-    inner_edges = visuals.Line(np.array(inner_edge_list) * cs, connect='segments', antialias=True, color=self.INNER_EDGE_COLOR)
+    vertices.set_data(
+      pos = np.array(list(vertex_set)) * cs,
+      size = 5,
+      face_color = self.VERTEX_COLOR,
+      edge_color = self.VERTEX_EDGE_COLOR
+      )
+    principal_edges = visuals.Line(
+      np.array(list(principal_edge_set)) * cs,
+      connect='segments',
+      antialias=True,
+      color=self.PRINCIPAL_EDGE_COLOR
+      )
+    inner_edges=visuals.Line(
+      np.array(inner_edge_list) * cs,
+      connect='segments',
+      antialias=True,
+      color=self.INNER_EDGE_COLOR
+      )
     self.view.add(vertices)
     self.view.add(principal_edges)
     self.view.add(inner_edges)
