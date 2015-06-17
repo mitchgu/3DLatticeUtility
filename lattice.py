@@ -146,5 +146,9 @@ class Lattice:
             continue
           else:
             self.lattice_points.add((i,j,k))
-            self.cunits[i,j,k] = Cunit(stress, self) 
+            self.cunits[i,j,k] = Cunit(stress, self)
+            self.cunits[i,j,k].vertex = np.array((i,j,k))
+
+  def generate_toolpath(self):
+    pass
       

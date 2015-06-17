@@ -3,7 +3,7 @@ import math
 from vispy.visuals.line import LineVisual
 from vispy.scene.node import Node
 from vispy.scene import visuals
-from vispy import color
+from vispy.color import ColorArray
 from lattice import Lattice, Cunit
 
 class CoolAxesVisual(LineVisual):
@@ -39,18 +39,68 @@ class CoolAxes(Node,CoolAxesVisual):
     Node.__init__(self, parent=parent, name=name)
 
 class LatticeNode(Node):
+  VERTEX_COLOR = ColorArray('#962420', 0.6)
+  VERTEX_EDGE_COLOR = ColorArray('#962420')
+  PRINCIPAL_EDGE_COLOR = ColorArray('#666')
+  INNER_EDGE_COLOR = ColorArray("#F59127")
+  def __init__(self, lattice, max_n, faded = False, parent=None, name=None):
+    Node.__init__(self, parent, name)
+    if faded: 
+      self.VERTEX_COLOR.alpha = 0.2
+      self.VERTEX_EDGE_COLOR.alpha = 0.2
+      self.PRINCIPAL_EDGE_COLOR.alpha = 0.2
+      self.INNER_EDGE_COLOR.alpha = 0.2
+    self.lattice = lattice
+    self.max_n = max_n
+    cs = lattice.cs
+    lps = lattice.lattice_points
+    #p = np.array(list(lps)) * cs
+    self.vertex_set = set()
+    self.principal_edge_set = set()
+    self.inner_edge_list = []
+    for lp in lps:
+      cunit = lattice.cunits[lp]
+      self.vertex_set = self.vertex_set | cunit.vertices
+      self.principal_edge_set = self.principal_edge_set | cunit.principal_edges
+      self.inner_edge_list += cunit.inner_edges(self.max_n)
+    print "# of vertices: " + str(len(self.vertex_set))
+    print "# of principal edges: " + str(len(self.principal_edge_set))
+    print "# of inner edges: " + str(len(self.inner_edge_list))
+    self.vertices = visuals.Markers()
+    self.vertices.set_data(
+      pos = np.array(list(self.vertex_set)) * cs,
+      size = 5,
+      face_color = self.VERTEX_COLOR,
+      edge_color = self.VERTEX_EDGE_COLOR
+      )
+    self.principal_edges = visuals.Line(
+      np.array(list(self.principal_edge_set)) * cs,
+      connect='segments',
+      antialias=True,
+      color=self.PRINCIPAL_EDGE_COLOR
+      )
+    self.inner_edges=visuals.Line(
+      np.array(self.inner_edge_list) * cs,
+      connect='segments',
+      antialias=True,
+      color=self.INNER_EDGE_COLOR
+      )
+    self.vertices.add_parent(self)
+    self.principal_edges.add_parent(self)
+    if not faded: self.inner_edges.add_parent(self)
+
+class DynamicLatticeNode(Node):
   axis_map = {'x': 0, 'y': 1, 'z': 2}
 
-  def __init__(self, lattice, extrude_width, shown, parent=None, name=None):
+  def __init__(self, lattice, max_n, shown, parent=None, name=None):
     Node.__init__(self, parent, name)
     self.lattice = lattice
+    self.max_n = max_n
     self.slice_all = slice(0,np.amax(lattice.dim),None)
-    self.max_inner_edges = int(math.floor(float(lattice.cs) / extrude_width) - 1)
     self.cunit_nodes = np.empty(lattice.dim, dtype = object)
-    self.set_transform('st', scale = np.ones(3) * lattice.cs, translate = np.ones(3) * 0.1)
+    self.set_transform('st', scale = np.ones(3) * lattice.cs)
     for lp in lattice.lattice_points:
-      current_cunit = CunitNode(lattice.cunits[lp], self.max_inner_edges, parent=self)
-      current_cunit.set_transform('st', translate = np.array(lp))
+      current_cunit = CunitNode(lattice.cunits[lp], self.max_n, parent=self)
       self.cunit_nodes[lp] = current_cunit
     self.hide()
     self.show(shown)
@@ -102,14 +152,13 @@ class LatticeNode(Node):
     self.show(self.shown)
 
 class CunitNode(Node):
-  VERTEX_COLOR = color.Color('#962420', 0.6)
-  VERTEX_EDGE_COLOR = color.Color('#962420', 0.99)
-  PRINCIPAL_EDGE_COLOR = color.Color('#666', 0.99)
-  INNER_EDGE_COLOR = color.Color("#F59127", 0.99)
+  VERTEX_COLOR = ColorArray('#962420', 0.6)
+  VERTEX_EDGE_COLOR = ColorArray('#962420')
+  PRINCIPAL_EDGE_COLOR = ColorArray('#666')
+  INNER_EDGE_COLOR = ColorArray("#F59127")
 
   def __init__(self, cu, max_n, parent=None, name=None):
     Node.__init__(self, parent, name)
-    cu.vertex = np.zeros(3)
     self.markers = visuals.Markers(parent=self)
     self.markers.set_data(
       pos = np.array(list(cu.vertices)),
