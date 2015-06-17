@@ -66,7 +66,7 @@ class Cunit:
   
   @property
   def vertices(self):
-    if self._vertices is None:
+    if True:
       self._vertices = set([tuple(self.vertex)])
       if self.sx is not None:
         for offset in [self.J, self.K, self.J + self.K]:
@@ -81,7 +81,7 @@ class Cunit:
 
   @property
   def principal_edges(self):
-    if self._principal_edges is None:
+    if True:
       self._principal_edges = set()
       toTuple = lambda a: tuple(map(tuple,a))
       if self.sx is not None:
@@ -96,7 +96,7 @@ class Cunit:
     return self._principal_edges
 
   def inner_edges(self, max_n):
-    if self._inner_edges is None:
+    if True:
       self._inner_edges = [np.array([self.vertex,self.vertex])] # just so it's not none
       if self.sx is not None: 
         num1,num2 = tuple(np.rint(self.sx * max_n).astype(int))
