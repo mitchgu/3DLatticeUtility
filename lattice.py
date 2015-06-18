@@ -54,9 +54,9 @@ class Cunit:
       [self.I, self.K, self.I + self.K],
       [self.I, self.J, self.I + self.J]]
     self.PRINCIPAL_EDGES = [
-      [self.ype, self.ype + self.K, self.zpe, self.zpe + self.J],
-      [self.xpe, self.xpe + self.K, self.zpe, self.zpe + self.I],
-      [self.xpe, self.xpe + self.J, self.ype, self.ype + self.I]]
+      [self.ype, self.zpe, self.ype + self.K, self.zpe + self.J],
+      [self.xpe, self.zpe, self.xpe + self.K, self.zpe + self.I],
+      [self.xpe, self.ype, self.xpe + self.J, self.ype + self.I]]
     self.INNER_EDGE_OFFSETS = [
       [[self.ype, self.K], [self.zpe, self.J]],
       [[self.xpe, self.K], [self.zpe, self.I]],

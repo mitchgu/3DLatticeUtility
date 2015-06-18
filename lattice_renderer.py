@@ -11,6 +11,7 @@ class LatticeRenderer:
   GROUND_BORDER_COLOR = ColorArray('#A2C9F5')
   d_lattice_node = None
   lattice_node = None
+  toolpath_node = None
 
   def __init__(self):
     self.canvas = SceneCanvas(
@@ -71,6 +72,15 @@ class LatticeRenderer:
     self.load_environment(lattice.dim, lattice.cs)
     self.lattice_node = LatticeNode(lattice)
     self.view.add(self.lattice_node)
+
+  def load_toolpath(self, toolpath):
+    self.toolpath_node = visuals.Line(
+      np.array(toolpath.vertices),
+      connect='strip',
+      antialias=True,
+      color='b'
+      )
+    self.view.add(self.toolpath_node)
 
   def reset_camera(self):
     self.camera.reset()
