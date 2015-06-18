@@ -60,18 +60,16 @@ class LatticeRenderer:
     self.view.add(axes)
     self.view.add(ground_plane)
 
-  def load_dynamic_lattice(self, lattice, extrude_width):
-    max_n = int(math.floor(float(lattice.cs) / extrude_width) - 1)
+  def load_dynamic_lattice(self, lattice):
     self.load_environment(lattice.dim, lattice.cs)
-    self.d_lattice_node = DynamicLatticeNode(lattice, max_n, (0,0,0))
+    self.d_lattice_node = DynamicLatticeNode(lattice, (0,0,0))
     self.view.add(self.d_lattice_node)
-    self.lattice_node = LatticeNode(lattice, max_n, True)
+    self.lattice_node = LatticeNode(lattice, True)
     self.view.add(self.lattice_node)
 
-  def load_lattice(self, lattice, extrude_width):
-    max_n = int(math.floor(float(lattice.cs) / extrude_width) - 1)
+  def load_lattice(self, lattice):
     self.load_environment(lattice.dim, lattice.cs)
-    self.lattice_node = LatticeNode(lattice, max_n)
+    self.lattice_node = LatticeNode(lattice)
     self.view.add(self.lattice_node)
 
   def reset_camera(self):

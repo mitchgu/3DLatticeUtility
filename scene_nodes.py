@@ -1,5 +1,4 @@
 import numpy as np
-import math
 from vispy.visuals.line import LineVisual
 from vispy.scene.node import Node
 from vispy.scene import visuals
@@ -43,7 +42,7 @@ class LatticeNode(Node):
   VERTEX_EDGE_COLOR = ColorArray('#962420')
   PRINCIPAL_EDGE_COLOR = ColorArray('#666')
   INNER_EDGE_COLOR = ColorArray("#F59127")
-  def __init__(self, lattice, max_n, faded = False, parent=None, name=None):
+  def __init__(self, lattice, faded = False, parent=None, name=None):
     Node.__init__(self, parent, name)
     if faded: 
       self.VERTEX_COLOR.alpha = 0.2
@@ -51,7 +50,6 @@ class LatticeNode(Node):
       self.PRINCIPAL_EDGE_COLOR.alpha = 0.2
       self.INNER_EDGE_COLOR.alpha = 0.2
     self.lattice = lattice
-    self.max_n = max_n
     cs = lattice.cs
     lps = lattice.lattice_points
     #p = np.array(list(lps)) * cs
@@ -62,7 +60,7 @@ class LatticeNode(Node):
       cunit = lattice.cunits[lp]
       self.vertex_set = self.vertex_set | cunit.vertices
       self.principal_edge_set = self.principal_edge_set | cunit.principal_edges
-      self.inner_edge_list += cunit.inner_edges(self.max_n)
+      self.inner_edge_list += cunit.inner_edges()
     print "# of vertices: " + str(len(self.vertex_set))
     print "# of principal edges: " + str(len(self.principal_edge_set))
     print "# of inner edges: " + str(len(self.inner_edge_list))
@@ -92,15 +90,14 @@ class LatticeNode(Node):
 class DynamicLatticeNode(Node):
   axis_map = {'x': 0, 'y': 1, 'z': 2}
 
-  def __init__(self, lattice, max_n, shown, parent=None, name=None):
+  def __init__(self, lattice, shown, parent=None, name=None):
     Node.__init__(self, parent, name)
     self.lattice = lattice
-    self.max_n = max_n
     self.slice_all = slice(0,np.amax(lattice.dim),None)
     self.cunit_nodes = np.empty(lattice.dim, dtype = object)
     self.set_transform('st', scale = np.ones(3) * lattice.cs)
     for lp in lattice.lattice_points:
-      current_cunit = CunitNode(lattice.cunits[lp], self.max_n, parent=self)
+      current_cunit = CunitNode(lattice.cunits[lp], parent=self)
       self.cunit_nodes[lp] = current_cunit
     self.hide()
     self.show(shown)
@@ -157,7 +154,7 @@ class CunitNode(Node):
   PRINCIPAL_EDGE_COLOR = ColorArray('#666')
   INNER_EDGE_COLOR = ColorArray("#F59127")
 
-  def __init__(self, cu, max_n, parent=None, name=None):
+  def __init__(self, cu, parent=None, name=None):
     Node.__init__(self, parent, name)
     self.markers = visuals.Markers(parent=self)
     self.markers.set_data(
@@ -174,7 +171,7 @@ class CunitNode(Node):
       color=self.PRINCIPAL_EDGE_COLOR,
       parent = self
       )
-    cu_inner_edges = np.array(cu.inner_edges(max_n))
+    cu_inner_edges = np.array(cu.inner_edges())
     self.inner_edges = visuals.Line(
       np.array(cu_inner_edges),
       connect='segments',

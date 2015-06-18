@@ -42,83 +42,91 @@ class Cunit:
   _principal_edges = None
   _inner_edges = None
 
-  def __init__(self, stress, parent):
+  def __init__(self, vertex, stress, max_n):
+    self.vertex = vertex
+    self.stress = stress
+    self.max_n = max_n
     self.sx = stress[0]
     self.sy = stress[1]
     self.sz = stress[2]
-    self.parent = parent
-    self.vertex = np.zeros(3)
+    self.xpe = np.array([self.vertex, self.vertex + self.I])
+    self.ype = np.array([self.vertex, self.vertex + self.J])
+    self.zpe = np.array([self.vertex, self.vertex + self.K])
+    self.VERTEX_OFFSETS = [
+      [self.J, self.K, self.J + self.K],
+      [self.I, self.K, self.I + self.K],
+      [self.I, self.J, self.I + self.J]]
+    self.PRINCIPAL_EDGES = [
+      [self.ype, self.ype + self.K, self.zpe, self.zpe + self.J],
+      [self.xpe, self.xpe + self.K, self.zpe, self.zpe + self.I],
+      [self.xpe, self.xpe + self.J, self.ype, self.ype + self.I]]
+    self.INNER_EDGE_OFFSETS = [
+      [[self.ype, self.K], [self.zpe, self.J]],
+      [[self.xpe, self.K], [self.zpe, self.I]],
+      [[self.xpe, self.J], [self.ype, self.I]]]
+    self.plane_vertices = [self.calc_plane_vertices(i) for i in xrange(3)]
+    self.plane_principal_edges = [self.calc_plane_principal_edges(i) for i in xrange(3)]
+    self.plane_inner_edges = [self.calc_plane_inner_edges(i) for i in xrange(3)]
 
   def __str__(self):
     return str(self.stress)
 
-  @property
-  def xpe(self):
-    return np.array([self.vertex, self.vertex + self.I])
+  def calc_plane_vertices(self, plane_index):
+    plane_vertices = []
+    if self.stress[plane_index] is not None:
+      for offset in self.VERTEX_OFFSETS[plane_index]:
+        plane_vertices.append(tuple(self.vertex + offset))
+    return plane_vertices
 
-  @property
-  def ype(self):
-    return np.array([self.vertex, self.vertex + self.J])
-  
-  @property
-  def zpe(self):
-    return np.array([self.vertex, self.vertex + self.K])
+  def calc_plane_principal_edges(self, plane_index):
+    plane_principal_edges = []
+    if self.stress[plane_index] is not None:
+      toTuple = lambda a: tuple(map(tuple,a))
+      for edge in self.PRINCIPAL_EDGES[plane_index]:
+        plane_principal_edges.append(toTuple(edge))
+    return plane_principal_edges
+
+  def calc_plane_inner_edges(self, plane_index):
+    plane_inner_edges = []
+    if self.stress[plane_index] is not None:
+      num1,num2 = tuple(np.rint(self.stress[plane_index] * self.max_n).astype(int))
+      step1,step2 = 1.0/(num1 + 1), 1.0 / (num2 + 1)
+      offsets = self.INNER_EDGE_OFFSETS[plane_index]
+      plane_inner_edges += [offsets[0][0] + i*step1*offsets[0][1] for i in xrange(1, num1+1)]
+      plane_inner_edges += [offsets[1][0] + i*step2*offsets[1][1] for i in xrange(1, num2+1)]
+    return plane_inner_edges
   
   @property
   def vertices(self):
     if True:
-      self._vertices = set([tuple(self.vertex)])
-      if self.sx is not None:
-        for offset in [self.J, self.K, self.J + self.K]:
-          self._vertices.add(tuple(self.vertex + offset))
-      if self.sy is not None:
-        for offset in [self.I, self.K, self.I + self.K]:
-          self._vertices.add(tuple(self.vertex + offset))
-      if self.sz is not None:
-        for offset in [self.I, self.J, self.I + self.J]:
-          self._vertices.add(tuple(self.vertex + offset))
-    return self._vertices
+      vertices = set([tuple(self.vertex)])
+      vertices = vertices | set(self.plane_vertices[0])
+      vertices = vertices | set(self.plane_vertices[1])
+      vertices = vertices | set(self.plane_vertices[2])
+    return vertices
 
   @property
   def principal_edges(self):
     if True:
-      self._principal_edges = set()
-      toTuple = lambda a: tuple(map(tuple,a))
-      if self.sx is not None:
-        for edge in [self.ype,self.ype+self.K,self.zpe,self.zpe+self.J]:
-          self._principal_edges.add(toTuple(edge))
-      if self.sy is not None:
-        for edge in [self.xpe,self.xpe+self.K,self.zpe,self.zpe+self.I]:
-          self._principal_edges.add(toTuple(edge))
-      if self.sz is not None:
-        for edge in [self.xpe,self.xpe+self.J,self.ype,self.ype+self.I]:
-          self._principal_edges.add(toTuple(edge))
-    return self._principal_edges
+      principal_edges = set()
+      principal_edges = principal_edges | set(self.plane_principal_edges[0])
+      principal_edges = principal_edges | set(self.plane_principal_edges[1])
+      principal_edges = principal_edges | set(self.plane_principal_edges[2])
+    return principal_edges
 
-  def inner_edges(self, max_n):
+  def inner_edges(self):
     if True:
-      self._inner_edges = [np.array([self.vertex,self.vertex])] # just so it's not none
-      if self.sx is not None: 
-        num1,num2 = tuple(np.rint(self.sx * max_n).astype(int))
-        step1,step2 = 1.0/(num1+1), 1.0/(num2+1)
-        self._inner_edges += [self.ype + i*step1*self.K for i in xrange(1,num1+1)]
-        self._inner_edges += [self.zpe + i*step2*self.J for i in xrange(1,num2+1)]
-      if self.sy is not None: 
-        num1,num2 = tuple(np.rint(self.sy * max_n).astype(int))
-        step1,step2 = 1.0/(num1+1), 1.0/(num2+1)
-        self._inner_edges += [self.xpe + i*step1*self.K for i in xrange(1,num1+1)]
-        self._inner_edges += [self.zpe + i*step2*self.I for i in xrange(1,num2+1)]
-      if self.sz is not None: 
-        num1,num2 = tuple(np.rint(self.sz * max_n).astype(int))
-        step1,step2 = 1.0/(num1+1), 1.0/(num2+1)
-        self._inner_edges += [self.xpe + i*step1*self.J for i in xrange(1,num1+1)]
-        self._inner_edges += [self.ype + i*step2*self.I for i in xrange(1,num2+1)]
-    return self._inner_edges
+      inner_edges = [np.array([self.vertex,self.vertex])] # just so it's not none
+      inner_edges += self.plane_inner_edges[0]
+      inner_edges += self.plane_inner_edges[1]
+      inner_edges += self.plane_inner_edges[2]
+      return inner_edges
 
 class Lattice:
-  def __init__(self, stress_mesh, cunit_size, scale = 1):
+  def __init__(self, stress_mesh, cunit_size, max_n, scale = 1):
     self.stress_mesh = stress_mesh
     self.cs = cunit_size
+    self.max_n = max_n
     self.scale = scale
     self.generate_cunits()
 
@@ -146,9 +154,5 @@ class Lattice:
             continue
           else:
             self.lattice_points.add((i,j,k))
-            self.cunits[i,j,k] = Cunit(stress, self)
-            self.cunits[i,j,k].vertex = np.array((i,j,k))
-
-  def generate_toolpath(self):
-    pass
+            self.cunits[i,j,k] = Cunit(np.array((i,j,k)), stress, self.max_n)
       

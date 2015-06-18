@@ -1,6 +1,6 @@
 import lattice as lt
 from lattice_renderer import LatticeRenderer
-import sys, cProfile
+import sys, cProfile, math
 
 def main():
   if len(sys.argv) != 3:
@@ -14,17 +14,20 @@ def main():
   render_method = raw_input("Use dynamic lattice loading? (slower) [Y or N] [Default N]: ") or 'N'
   render_dynamic_lattice = True if render_method == 'Y' or render_method == 'y' else False
 
+
+  max_n = int(math.floor(cunit_size / extrude_width) - 1)
+
   print "Creating a stress mesh from FEA files"
   stress_mesh = lt.StressMesh(node_file_path,stress_file_path, mesh_size)
   print "Generating a lattice from stress mesh and parameters given"
-  lattice = lt.Lattice(stress_mesh, cunit_size, stress_scale)
+  lattice = lt.Lattice(stress_mesh, cunit_size, max_n, stress_scale)
   print "Setting up the visualization window"
   lr = LatticeRenderer()
   print "Loading the lattice into the visualization"
   if render_dynamic_lattice:
-    lr.load_dynamic_lattice(lattice, extrude_width)
+    lr.load_dynamic_lattice(lattice)
   else: 
-    lr.load_lattice(lattice, extrude_width)
+    lr.load_lattice(lattice)
   print "Running visualization"
   lr.render()
 
