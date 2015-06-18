@@ -60,7 +60,7 @@ class LatticeNode(Node):
       cunit = lattice.cunits[lp]
       self.vertex_set = self.vertex_set | cunit.vertices
       self.principal_edge_set = self.principal_edge_set | cunit.principal_edges
-      self.inner_edge_list += cunit.inner_edges()
+      self.inner_edge_list += cunit.inner_edges
     print "# of vertices: " + str(len(self.vertex_set))
     print "# of principal edges: " + str(len(self.principal_edge_set))
     print "# of inner edges: " + str(len(self.inner_edge_list))
@@ -171,7 +171,7 @@ class CunitNode(Node):
       color=self.PRINCIPAL_EDGE_COLOR,
       parent = self
       )
-    cu_inner_edges = np.array(cu.inner_edges())
+    cu_inner_edges = np.array(cu.inner_edges)
     self.inner_edges = visuals.Line(
       np.array(cu_inner_edges),
       connect='segments',

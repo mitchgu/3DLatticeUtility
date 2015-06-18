@@ -38,9 +38,6 @@ class StressMesh:
 
 class Cunit:
   I,J,K = np.array([1,0,0]),np.array([0,1,0]),np.array([0,0,1])
-  _vertices = None
-  _principal_edges = None
-  _inner_edges = None
 
   def __init__(self, vertex, stress, max_n):
     self.vertex = vertex
@@ -114,6 +111,7 @@ class Cunit:
       principal_edges = principal_edges | set(self.plane_principal_edges[2])
     return principal_edges
 
+  @property
   def inner_edges(self):
     if True:
       inner_edges = [np.array([self.vertex,self.vertex])] # just so it's not none
