@@ -37,5 +37,5 @@ class Toolpath:
 
   def export_toolpath(self):
     with open('toolpath.txt', 'wb') as myfile:
-      wr = csv.writer(myfile), quoting=csv.QUOTE_ALL)
+      wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
       wr.writerows(self.vertices)
